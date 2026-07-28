@@ -1,0 +1,5 @@
+interface:
+  display_name: "Project-engineering Rules"
+
+policy:
+  allow_implicit_invocation: true
