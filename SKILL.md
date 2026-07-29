@@ -38,7 +38,8 @@ Avoid:
 - State the conclusion first, then provide necessary details.
 - Before modifying code, analyze the issue, present a plan, and wait for explicit user approval.
 - Do not install packages unless the user explicitly approves.
-- Do not automatically run `git commit`, `git push`, or `git merge`.
+- After approved changes pass verification, automatically create a local Git commit for task-related files when working in a Git repository.
+- Keep every Git operation local and offline. Never contact a Git remote or network-backed Git service.
 - Do not modify CI configuration unless explicitly requested.
 - Do not modify files unrelated to the task.
 - Keep the change set small unless the nature of the task requires otherwise.
@@ -680,10 +681,20 @@ Common checks:
 
 ## 19. Git Rules
 
-- Do not automatically run `git commit`.
-- Do not automatically run `git push`.
-- Do not push directly to `main`.
-- Do not use destructive commands such as `git reset --hard` unless explicitly requested.
+- Keep all Git operations local and offline.
+- After approved changes pass verification, automatically stage only task-related files and create a local commit unless the user explicitly opts out.
+- Never stage or commit unrelated or pre-existing user changes.
+- Before committing, review the staged diff, check for secrets or sensitive data, and report the verification result.
+- Inspect effective Git hooks before an automatic commit. If a hook may access the network, or its behavior cannot be determined safely, do not run the commit; report the blocker instead.
+- Do not bypass Git hooks with `--no-verify` unless the user explicitly approves.
+- Local read-only and version-recording operations may run automatically when relevant, including `git init`, `git status`, `git diff`, `git log`, `git show`, `git add`, and `git commit`.
+- Local branch or tag creation may run automatically when it is part of the approved task.
+- Require explicit approval before local destructive or history-rewriting operations, including `git reset --hard`, `git clean`, `git branch -D`, discarding changes with `git checkout` or `git restore`, `git rebase`, `git commit --amend`, `git merge`, and `git cherry-pick`.
+- Never run Git commands that may contact a remote, including `git clone`, `git fetch`, `git pull`, `git push`, `git ls-remote`, `git remote update`, network-backed `git submodule update`, remote Git LFS operations, or `git archive --remote`.
+- Never add, remove, or change Git remote configuration automatically.
+- Never use network-backed Git hosting tools or APIs such as `gh`, `glab`, `hub`, GitHub, GitLab, or Bitbucket integrations.
+- If it is unclear whether an operation may access the network, do not run it; use a confirmed local-only alternative or report the limitation.
+- An existing remote configuration may remain in the repository, but it must not be contacted.
 - Use Conventional Commits.
 - Explain the impact scope of each change.
 
@@ -698,13 +709,13 @@ test: add checkout service tests
 chore: update local scripts
 ```
 
-When the user requests a commit, first present:
+Before an automatic local commit:
 
 - Change summary.
 - Test results.
 - Suggested commit message.
 
-Commit only after confirmation.
+Do not create the commit when verification fails, task-related changes cannot be isolated safely, or a local hook may access the network.
 
 ## 20. Dependency Rules
 
@@ -775,7 +786,8 @@ A task is complete only when:
 - `docs/changelog-ai.md` was updated when needed.
 - Major decisions were recorded in an ADR when needed.
 - A Documentation Summary was provided.
-- No automatic commit, push, or merge was performed.
+- Task-related changes were committed locally after successful verification, unless the user opted out or a documented safety blocker prevented the commit.
+- No remote Git or network-backed Git service operation was performed.
 
 ## 24. Documentation Summary Template
 
@@ -850,14 +862,15 @@ Impact:
 
 ## 25. Prohibited Actions
 
+Never perform remote Git or network-backed Git service operations.
+
 Unless explicitly requested, do not:
 
 - Install packages.
 - Update packages.
 - Modify CI.
-- Commit.
-- Push.
 - Merge.
+- Rewrite or destructively discard local Git history or working-tree changes.
 - Delete data.
 - Perform broad refactors.
 - Rewrite project architecture.
