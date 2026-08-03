@@ -168,6 +168,8 @@ If implementation reveals that additional files, commands, dependencies, migrati
 ```text
 Requirement Understanding
 ↓
+Project Bootstrap and Security Preflight
+↓
 Project Inspection
 ↓
 Root Cause Analysis
@@ -190,6 +192,7 @@ Task Complete
 Stage expectations:
 
 - Requirement Understanding: confirm goals, constraints, inputs, and expected outputs.
+- Project Bootstrap and Security Preflight: confirm the project root, initialize a local Git repository when absent, evaluate ignore rules, and check for plaintext secrets and configuration-loading architecture before staging or modifying affected code.
 - Project Inspection: identify relevant files, dependencies, and existing patterns.
 - Root Cause Analysis: determine the actual cause rather than applying a speculative patch.
 - Change Plan: propose the smallest viable change.
@@ -645,6 +648,32 @@ Always consider:
 - Enforce API authorization explicitly.
 - Deny unauthorized operations by default.
 
+### 17.1 Plaintext Secret and Configuration Architecture Preflight
+
+When this skill is first applied to a project, including an existing project that adopted the skill after development began, perform a security preflight before modifying affected code or staging files. Repeat the relevant checks when repository state or integration code may have changed.
+
+The preflight must:
+
+- Inspect active source and configuration files for plaintext passwords, tokens, API keys, SQL or other service connection strings, private keys, credentials, and comparable sensitive values.
+- Inspect integrations with databases, APIs, and third-party services to confirm that sensitive values are loaded through the project's configuration mechanism instead of being hardcoded in source code.
+- Design all new or modified integrations that require sensitive settings to load them from an external configuration file from the outset. Never use temporary hardcoded secrets or secret-bearing fallback defaults.
+- Prefer the framework or project's existing configuration provider. Do not introduce a new dependency merely to load configuration.
+- Exclude `.git`, dependency directories, generated output, build artifacts, and binary files unless evidence requires inspecting them.
+- Never print or copy a discovered secret into chat, logs, plans, patches, tests, or documentation. Report only a masked value, the file and location, and the secret category needed for diagnosis.
+- Treat pattern matches as potential findings until verified safely; avoid presenting a heuristic false positive as a confirmed secret.
+
+If sensitive values are hardcoded or the integration does not use a configuration-loading architecture:
+
+1. Stop affected edits, staging, and commits.
+2. Explain the finding, affected files, exposure risk, and recommended configuration structure without revealing the value.
+3. Ask the user for explicit approval before refactoring the configuration architecture or modifying ignore rules.
+4. After approval, update the application to read an external configuration file through the existing configuration mechanism and exclude the real configuration file from Git. Do not copy a discovered secret through a generated patch; instruct the user to populate the local ignored file and rotate the value when exposure is possible.
+5. Keep only a safe example or template configuration in Git, using placeholders and documenting required keys without real values.
+6. Fail fast when required configuration is missing or invalid, and ensure errors and logs never expose sensitive values.
+7. Update relevant tests and documentation for the configuration-loading behavior.
+
+If a sensitive value may already have been tracked or committed, recommend revoking or rotating it and assess whether history cleanup is required. Never rewrite Git history or remove tracked data without explicit approval and a recovery plan.
+
 For security-related changes, explain:
 
 - Threat model.
@@ -682,6 +711,10 @@ Common checks:
 ## 19. Git Rules
 
 - Keep all Git operations local and offline.
+- When this skill is applied to a software project, resolve and verify the exact project root before performing Git setup. Never initialize Git in a home directory, drive root, temporary root, or another broad or ambiguous directory.
+- Check whether the project is already inside a Git work tree. If it is not, automatically run `git init` in the verified project root before continuing; this initialization is an explicit exception to the approval-first editing workflow.
+- After confirming or creating the repository, inspect the project technology stack, existing `.gitignore`, generated output, dependency directories, IDE files, temporary files, local configuration files, and sensitive configuration candidates. Report the minimal ignore patterns that should be added.
+- Obtain explicit approval before creating or modifying `.gitignore`. Do not stage or commit files until the plaintext-secret and configuration-architecture preflight in Section 17.1 is complete and all findings are resolved or explicitly accepted by the user.
 - After approved changes pass verification, automatically stage only task-related files and create a local commit unless the user explicitly opts out.
 - Never stage or commit unrelated or pre-existing user changes.
 - Before committing, review the staged diff, check for secrets or sensitive data, and report the verification result.
@@ -779,6 +812,8 @@ A task is complete only when:
 
 - The requirement is satisfied.
 - The implemented scope matches the approved plan.
+- The Git repository and ignore-rule preflight was completed when this skill was first applied to the project.
+- The plaintext-secret and configuration-architecture preflight was completed, with unresolved findings reported and left unstaged.
 - The code is readable and maintainable.
 - Relevant tests were run, or the inability to run them was explained.
 - Relevant documentation was synchronized, or the reason for no update was explained.
