@@ -238,6 +238,7 @@ Recommended structure:
 ```text
 project/
 ├── README.md
+├── CHANGELOG.md
 ├── AGENTS.md
 ├── CLAUDE.md
 ├── docs/
@@ -248,7 +249,8 @@ project/
 │   ├── development-guide.md
 │   ├── tech-debt.md
 │   ├── ai-context.md
-│   └── changelog-ai.md
+│   ├── changelog-ai.md
+│   └── deployed/
 └── .decisions/
     └── ADR-001.md
 ```
@@ -471,6 +473,18 @@ Tests:
 Notes:
 ```
 
+### 10.11 CHANGELOG.md
+
+Maintain a concise, human-readable record of what the project does and how each production version differs from the previous version.
+
+- Create `CHANGELOG.md` for every new project and summarize its purpose and implemented features from the beginning.
+- Keep an `Unreleased` section for the active development cycle. Record every completed feature and bug fix as work progresses.
+- When deploying to production, convert the `Unreleased` section into a versioned entry with the deployment date, then create a new `Unreleased` section for the next cycle.
+- Describe user-visible behavior, business outcomes, and workflow changes before implementation details.
+- Prefer plain language that non-technical readers can understand. When a technical term is necessary, immediately explain in plain language what it means and the principle, business rule, computer rule, or process it represents.
+- Keep entries concise and do not expose secrets, internal credentials, or unnecessary low-level implementation details.
+- Do not use `CHANGELOG.md` as a replacement for `docs/changelog-ai.md`; the former is a human-facing product and release history, while the latter records AI-assisted engineering work.
+
 ## 11. Documentation Workflow
 
 For every code change, evaluate whether the following documents are affected:
@@ -497,6 +511,39 @@ If not affected:
 - State why documentation changes were unnecessary.
 
 Do not allow code and documentation to drift out of sync. API, database, architecture, and technical-debt changes must be reflected in their corresponding documents. Every completed task must include a Documentation Summary.
+
+### 11.1 Production Deployment Archive and Release Log
+
+Treat a request to deploy an established project to production as a release gate. Complete and verify the archive and release-log workflow before the production deployment proceeds.
+
+A new project is a project that has not yet completed its first production deployment. A new project must maintain `CHANGELOG.md`, but it does not require a historical deployment archive when no completed prior release artifacts exist. After its first production deployment, treat it as an established project for every later release.
+
+Before deploying an established project to production:
+
+1. Identify the release version and deployment date, then create or reuse `docs/deployed/<release-id>/`, following an equivalent existing project convention when one is already established.
+2. Inventory completed release artifacts and present an archive manifest and move plan for explicit approval before moving files.
+3. Move completed working documents that belong only to the release into the archive, including closed test plans, test results, acceptance records, release checklists, completed feature plans, and other finished progress documents.
+4. Archive every release-specific database change script required for the deployment, including schema changes, multi-table changes, data corrections, and other SQL intended for direct execution in SQL Server Management Studio (SSMS).
+5. Add an archive `README.md` or manifest that records the release, deployment date, archived contents, database script order, prerequisites, verification steps, and available rollback guidance.
+6. Finalize the corresponding `CHANGELOG.md` entry in plain language.
+7. Verify that references, build steps, tests, database deployment inputs, and deployment automation still work after archival. Do not proceed with production deployment when archival is incomplete or breaks an active dependency.
+
+Database archive rules:
+
+- Name SQL files in execution order so the user can apply them directly in SSMS.
+- State the target database or scope, prerequisites, execution order, verification queries or checks, and rollback steps when available.
+- Keep SQL scripts free of passwords, connection strings, tokens, and environment-specific secrets.
+- Preserve canonical migrations or scripts in their original location when build, test, audit, rollback, or deployment tooling still depends on them. In that case, place a release snapshot in the archive instead of moving the canonical file.
+- Do not claim that a script is safe to execute directly until its syntax, order, transaction behavior, affected data, and recovery considerations have been reviewed.
+
+Do not archive or relocate:
+
+- Runtime source code, active configuration structure, or files required to build, test, run, or deploy the application.
+- Current canonical documentation such as `README.md`, architecture, API, database, and development guides.
+- Open technical debt, pending work, active plans, or documents still needed for the next release.
+- Canonical migrations, tests, or deployment files referenced by automation or required for traceability.
+
+Keep active planning and testing locations limited to the current development cycle so completed material does not interfere with later planning. Never delete completed release artifacts merely to clean the active workspace; archive them according to this workflow.
 
 ## 12. Architecture Rules
 
@@ -819,7 +866,9 @@ A task is complete only when:
 - Relevant documentation was synchronized, or the reason for no update was explained.
 - `docs/ai-context.md` was updated when needed.
 - `docs/changelog-ai.md` was updated when needed.
+- `CHANGELOG.md` was created or updated in plain language for the current project and release cycle.
 - Major decisions were recorded in an ADR when needed.
+- When a production deployment was requested, the applicable deployment archive was completed, approved, and verified before deployment.
 - A Documentation Summary was provided.
 - Task-related changes were committed locally after successful verification, unless the user opted out or a documented safety blocker prevented the commit.
 - No remote Git or network-backed Git service operation was performed.
@@ -859,6 +908,14 @@ AI Context:
 - Reason:
 
 Changelog:
+- Updated:
+- Reason:
+
+Human Release Log:
+- Updated:
+- Reason:
+
+Deployment Archive:
 - Updated:
 - Reason:
 
